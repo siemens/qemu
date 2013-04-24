@@ -76,6 +76,11 @@ void i2c_set_slave_address(I2CSlave *dev, uint8_t address)
     dev->address = address;
 }
 
+void i2c_set_slave_address_mask(I2CSlave *dev, uint8_t mask)
+{
+    dev->address_mask = mask;
+}
+
 /* Return nonzero if bus is busy.  */
 int i2c_bus_busy(i2c_bus *bus)
 {
@@ -93,7 +98,7 @@ int i2c_start_transfer(i2c_bus *bus, uint8_t address, int recv)
     QTAILQ_FOREACH(kid, &bus->qbus.children, sibling) {
         DeviceState *qdev = kid->child;
         I2CSlave *candidate = I2C_SLAVE(qdev);
-        if (candidate->address == address) {
+        if (candidate->address == (address & candidate->address_mask)) {
             slave = candidate;
             break;
         }
@@ -108,7 +113,7 @@ int i2c_start_transfer(i2c_bus *bus, uint8_t address, int recv)
        start condition.  */
     bus->current_dev = slave;
     if (sc->event) {
-        sc->event(slave, recv ? I2C_START_RECV : I2C_START_SEND);
+        sc->event(slave, recv ? I2C_START_RECV : I2C_START_SEND, address);
     }
     return 0;
 }
@@ -124,7 +129,7 @@ void i2c_end_transfer(i2c_bus *bus)
 
     sc = I2C_SLAVE_GET_CLASS(dev);
     if (sc->event) {
-        sc->event(dev, I2C_FINISH);
+        sc->event(dev, I2C_FINISH, 0);
     }
 
     bus->current_dev = NULL;
@@ -175,7 +180,7 @@ void i2c_nack(i2c_bus *bus)
 
     sc = I2C_SLAVE_GET_CLASS(dev);
     if (sc->event) {
-        sc->event(dev, I2C_NACK);
+        sc->event(dev, I2C_NACK, 0);
     }
 }
 
@@ -207,6 +212,7 @@ static int i2c_slave_qdev_init(DeviceState *dev)
     I2CSlave *s = I2C_SLAVE(dev);
     I2CSlaveClass *sc = I2C_SLAVE_GET_CLASS(s);
 
+    s->address_mask = 0x7f;
     return sc->init(s);
 }
 

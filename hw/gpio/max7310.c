@@ -123,7 +123,7 @@ static int max7310_tx(I2CSlave *i2c, uint8_t data)
     return 0;
 }
 
-static void max7310_event(I2CSlave *i2c, enum i2c_event event)
+static void max7310_event(I2CSlave *i2c, enum i2c_event event, uint8_t param)
 {
     MAX7310State *s = (MAX7310State *) i2c;
     s->len = 0;

@@ -297,7 +297,7 @@ static void wm8750_reset(I2CSlave *i2c)
     s->i2c_len = 0;
 }
 
-static void wm8750_event(I2CSlave *i2c, enum i2c_event event)
+static void wm8750_event(I2CSlave *i2c, enum i2c_event event, uint8_t param)
 {
     WM8750State *s = (WM8750State *) i2c;
 

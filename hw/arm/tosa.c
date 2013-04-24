@@ -157,7 +157,7 @@ static int tosa_dac_send(I2CSlave *i2c, uint8_t data)
     return 0;
 }
 
-static void tosa_dac_event(I2CSlave *i2c, enum i2c_event event)
+static void tosa_dac_event(I2CSlave *i2c, enum i2c_event event, uint8_t param)
 {
     TosaDACState *s = FROM_I2C_SLAVE(TosaDACState, i2c);
     s->len = 0;

@@ -170,7 +170,7 @@ static int tmp105_tx(I2CSlave *i2c, uint8_t data)
     return 0;
 }
 
-static void tmp105_event(I2CSlave *i2c, enum i2c_event event)
+static void tmp105_event(I2CSlave *i2c, enum i2c_event event, uint8_t param)
 {
     TMP105State *s = TMP105(i2c);
 

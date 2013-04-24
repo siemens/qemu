@@ -173,7 +173,7 @@ static int ssd0303_send(I2CSlave *i2c, uint8_t data)
     return 0;
 }
 
-static void ssd0303_event(I2CSlave *i2c, enum i2c_event event)
+static void ssd0303_event(I2CSlave *i2c, enum i2c_event event, uint8_t param)
 {
     ssd0303_state *s = (ssd0303_state *)i2c;
     switch (event) {

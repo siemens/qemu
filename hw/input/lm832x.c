@@ -378,7 +378,7 @@ static void lm_kbd_write(LM823KbdState *s, int reg, int byte, uint8_t value)
     }
 }
 
-static void lm_i2c_event(I2CSlave *i2c, enum i2c_event event)
+static void lm_i2c_event(I2CSlave *i2c, enum i2c_event event, uint8_t param)
 {
     LM823KbdState *s = FROM_I2C_SLAVE(LM823KbdState, i2c);
 

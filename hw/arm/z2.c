@@ -216,7 +216,7 @@ static int aer915_send(I2CSlave *i2c, uint8_t data)
     return 0;
 }
 
-static void aer915_event(I2CSlave *i2c, enum i2c_event event)
+static void aer915_event(I2CSlave *i2c, enum i2c_event event, uint8_t param)
 {
     AER915State *s = FROM_I2C_SLAVE(AER915State, i2c);
     switch (event) {

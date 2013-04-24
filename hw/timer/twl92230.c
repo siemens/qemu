@@ -706,7 +706,7 @@ static void menelaus_write(void *opaque, uint8_t addr, uint8_t value)
     }
 }
 
-static void menelaus_event(I2CSlave *i2c, enum i2c_event event)
+static void menelaus_event(I2CSlave *i2c, enum i2c_event event, uint8_t param)
 {
     MenelausState *s = (MenelausState *) i2c;
 

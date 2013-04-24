@@ -66,7 +66,7 @@ static void smbus_do_write(SMBusDevice *dev)
     }
 }
 
-static void smbus_i2c_event(I2CSlave *s, enum i2c_event event)
+static void smbus_i2c_event(I2CSlave *s, enum i2c_event event, uint8_t param)
 {
     SMBusDevice *dev = SMBUS_DEVICE(s);
 

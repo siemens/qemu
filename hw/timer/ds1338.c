@@ -88,7 +88,7 @@ static void inc_regptr(DS1338State *s)
     }
 }
 
-static void ds1338_event(I2CSlave *i2c, enum i2c_event event)
+static void ds1338_event(I2CSlave *i2c, enum i2c_event event, uint8_t param)
 {
     DS1338State *s = FROM_I2C_SLAVE(DS1338State, i2c);
 

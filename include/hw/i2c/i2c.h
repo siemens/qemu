@@ -39,7 +39,7 @@ typedef struct I2CSlaveClass
     int (*recv)(I2CSlave *s);
 
     /* Notify the slave of a bus state change.  */
-    void (*event)(I2CSlave *s, enum i2c_event event);
+    void (*event)(I2CSlave *s, enum i2c_event event, uint8_t param);
 } I2CSlaveClass;
 
 struct I2CSlave
@@ -48,10 +48,12 @@ struct I2CSlave
 
     /* Remaining fields for internal use by the I2C code.  */
     uint8_t address;
+    uint8_t address_mask;
 };
 
 i2c_bus *i2c_init_bus(DeviceState *parent, const char *name);
 void i2c_set_slave_address(I2CSlave *dev, uint8_t address);
+void i2c_set_slave_address_mask(I2CSlave *dev, uint8_t mask);
 int i2c_bus_busy(i2c_bus *bus);
 int i2c_start_transfer(i2c_bus *bus, uint8_t address, int recv);
 void i2c_end_transfer(i2c_bus *bus);
