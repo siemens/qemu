@@ -108,6 +108,8 @@ static inline char *realpath(const char *path, char *resolved_path)
 void configure_icount(const char *option);
 extern int use_icount;
 
+void configure_slowdown(const char *option);
+
 #include "qemu/osdep.h"
 #include "qemu/bswap.h"
 

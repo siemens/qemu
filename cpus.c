@@ -61,6 +61,7 @@
 #endif /* CONFIG_LINUX */
 
 static CPUArchState *next_cpu;
+static bool use_slowdown;
 
 static bool cpu_thread_is_idle(CPUArchState *env)
 {
@@ -105,6 +106,8 @@ static QEMUTimer *icount_vm_timer;
 static QEMUTimer *icount_warp_timer;
 static int64_t vm_clock_warp_start;
 static int64_t qemu_icount;
+
+static double slowdown_factor;
 
 typedef struct TimersState {
     int64_t cpu_ticks_prev;
@@ -383,6 +386,21 @@ void configure_icount(const char *option)
     icount_vm_timer = qemu_new_timer_ns(vm_clock, icount_adjust_vm, NULL);
     qemu_mod_timer(icount_vm_timer,
                    qemu_get_clock_ns(vm_clock) + get_ticks_per_sec() / 10);
+}
+
+void configure_slowdown(const char *option)
+{
+    if (!option) {
+        return;
+    }
+
+    slowdown_factor = strtod(option, NULL) / 100.0;
+    /* We cannot provide speedups, obviously */
+    if (slowdown_factor < 0) {
+        slowdown_factor *= -1.0;
+    }
+
+    use_slowdown = true;
 }
 
 /***********************************************************/
@@ -1121,6 +1139,8 @@ void vm_stop_force_state(RunState state)
 static int tcg_cpu_exec(CPUArchState *env)
 {
     int ret;
+    int64_t ss = 0; /* Initialise to avoid bogus maybe-uninitialized error */
+    uint64_t slowdown_sleep;
 #ifdef CONFIG_PROFILER
     int64_t ti;
 #endif
@@ -1141,7 +1161,17 @@ static int tcg_cpu_exec(CPUArchState *env)
         env->icount_decr.u16.low = decr;
         env->icount_extra = count;
     }
+    if (use_slowdown) {
+        ss = qemu_get_clock_ns(rt_clock);
+    }
+
     ret = cpu_exec(env);
+
+    if (use_slowdown) {
+        slowdown_sleep = qemu_get_clock_ns(rt_clock) - ss;
+        slowdown_sleep *= slowdown_factor;
+        g_usleep(slowdown_sleep / 1024);
+    }
 #ifdef CONFIG_PROFILER
     qemu_time += profile_getclock() - ti;
 #endif

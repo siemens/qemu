@@ -2801,6 +2801,21 @@ order cores with complex cache hierarchies.  The number of instructions
 executed often has little or no correlation with actual performance.
 ETEXI
 
+DEF("slowdown", HAS_ARG, QEMU_OPTION_slowdown, \
+    "-slowdown s     Slow down the CPU emulation by (approximately) s percent\n",
+    QEMU_ARCH_ALL)
+STEXI
+@item -slowdown @var{s}
+@findex -slowdown
+Slow down the virtual CPU by approximately s percent (i.e., for c time
+units of execution time, sleep for c*s/100 time units). This makes it
+possible to align the emulated machine's performance roughly with
+the performance of physical entities, but does not provide identical
+performance profiles since the emulation is not cycle accurate.
+
+Note that this option cannot be used when KVM or XEN support is active.
+ETEXI
+
 DEF("watchdog", HAS_ARG, QEMU_OPTION_watchdog, \
     "-watchdog i6300esb|ib700\n" \
     "                enable virtual hardware watchdog [default=none]\n",

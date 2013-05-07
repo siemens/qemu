@@ -2839,6 +2839,7 @@ int main(int argc, char **argv, char **envp)
     int i;
     int snapshot, linux_boot;
     const char *icount_option = NULL;
+    const char *slowdown_option = NULL;
     const char *initrd_filename;
     const char *kernel_filename, *kernel_cmdline;
     char boot_devices[33] = "";
@@ -3751,6 +3752,9 @@ int main(int argc, char **argv, char **envp)
             case QEMU_OPTION_icount:
                 icount_option = optarg;
                 break;
+            case QEMU_OPTION_slowdown:
+                slowdown_option = optarg;
+                break;
             case QEMU_OPTION_incoming:
                 incoming = optarg;
                 runstate_set(RUN_STATE_INMIGRATE);
@@ -4168,6 +4172,12 @@ int main(int argc, char **argv, char **envp)
 
     /* clean up network at qemu process termination */
     atexit(&net_cleanup);
+
+    if (slowdown_option && (kvm_enabled() || xen_enabled())) {
+        fprintf(stderr, "-slowdown is not allowed with kvm or xen\n");
+        exit(1);
+    }
+    configure_slowdown(slowdown_option);
 
     if (net_init_clients() < 0) {
         exit(1);
