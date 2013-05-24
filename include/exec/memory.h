@@ -124,10 +124,6 @@ struct MemoryRegionOps {
          bool unaligned;
     } impl;
 
-    /* If .read and .write are not present, old_portio may be used for
-     * backwards compatibility with old portio registration
-     */
-    const MemoryRegionPortio *old_portio;
     /* If .read and .write are not present, old_mmio may be used for
      * backwards compatibility with old mmio registration
      */
@@ -183,6 +179,7 @@ struct MemoryRegionPortio {
     unsigned size;
     IOPortReadFunc *read;
     IOPortWriteFunc *write;
+    uint32_t base; /* private field */
 };
 
 #define PORTIO_END_OF_LIST() { }
