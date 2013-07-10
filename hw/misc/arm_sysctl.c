@@ -13,6 +13,7 @@
 #include "hw/sysbus.h"
 #include "hw/arm/primecell.h"
 #include "sysemu/sysemu.h"
+#include "sysemu/char.h"
 
 #define LOCK_VALUE 0xa05f
 
@@ -20,6 +21,7 @@ typedef struct {
     SysBusDevice busdev;
     MemoryRegion iomem;
     qemu_irq pl110_mux_ctrl;
+    CharDriverState *display;
 
     uint32_t sys_id;
     uint32_t leds;
@@ -111,6 +113,24 @@ static void arm_sysctl_reset(DeviceState *d)
     } else {
         /* All others: CLCDID 0x1f, indicating VGA */
         s->sys_clcd = 0x1f00;
+    }
+}
+
+static void notify_led_change(CharDriverState *chr, uint32_t old, uint32_t new)
+{
+    uint32_t changed;
+    unsigned int i;
+
+    if (chr == NULL) {
+        return;
+    }
+
+    changed = old ^ new;
+    for (i = 0; i < 8; i++) {
+        if (changed & (1 << i)) {
+            qemu_chr_fe_printf(chr, "%u:%s\r\n", i,
+                               new & (1 << i) ? "on" : "off");
+        }
     }
 }
 
@@ -380,6 +400,7 @@ static void arm_sysctl_write(void *opaque, hwaddr offset,
 
     switch (offset) {
     case 0x08: /* LED */
+        notify_led_change(s->display, s->leds, (uint32_t)val);
         s->leds = val;
         break;
     case 0x0c: /* OSC0 */
@@ -589,6 +610,10 @@ static void arm_sysctl_init(Object *obj)
     SysBusDevice *sd = SYS_BUS_DEVICE(obj);
     arm_sysctl_state *s = FROM_SYSBUS(arm_sysctl_state, sd);
 
+    s->display = qemu_chr_new("leds0", "chardev:leds", NULL);
+    if (s->display) {
+        qemu_chr_fe_printf(s->display, "8 LEDs available\r\n");
+    }
     memory_region_init_io(&s->iomem, &arm_sysctl_ops, s, "arm-sysctl", 0x1000);
     sysbus_init_mmio(sd, &s->iomem);
     qdev_init_gpio_in(dev, arm_sysctl_gpio_set, 2);
