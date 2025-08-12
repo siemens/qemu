@@ -51,6 +51,7 @@
 #include "qemu/module.h"
 #include "sdmmc-internal.h"
 #include "trace.h"
+#include "crypto/hmac.h"
 
 //#define DEBUG_SD 1
 
@@ -197,6 +198,7 @@ struct SDState {
     RPMBDataFrame rpmb_result;
     EMMCPersistentState pers_state;
     uint16_t rpmb_read_addr;
+    QCryptoHmac *rpmb_hmac;
     QEMUTimer *ocr_power_timer;
     uint8_t dat_lines;
     bool cmd_line;
@@ -1102,6 +1104,38 @@ static void sd_blk_write(SDState *sd, uint64_t addr, uint32_t len)
     }
 }
 
+static bool rpmb_calc_hmac(QCryptoHmac **hmac, const uint8_t *key,
+                           const uint8_t *buf, uint16_t len, uint8_t *result,
+                           bool last)
+{
+    size_t result_len = RPMB_KEY_LEN;
+    size_t *result_len_ptr = last ? &result_len : NULL;
+    bool success = false;
+    Error *err = NULL;
+
+    if (*hmac == NULL) {
+        *hmac = qcrypto_hmac_new(QCRYPTO_HASH_ALGO_SHA256, key, RPMB_KEY_LEN,
+                                &err);
+        if (!*hmac) {
+            error_report_err(err);
+            return false;
+        }
+    }
+    if (qcrypto_hmac_bytes(*hmac, (const char*)buf, len, &result,
+                           result_len_ptr, &err) == 0) {
+        assert(result_len == RPMB_KEY_LEN);
+        success = true;
+    } else {
+        error_report_err(err);
+    }
+    if (last) {
+        qcrypto_hmac_free(*hmac);
+        *hmac = NULL;
+    }
+
+    return success;
+}
+
 static void emmc_rpmb_blk_read(SDState *sd, uint64_t addr, uint32_t len)
 {
     uint16_t resp = be16_to_cpu(sd->rpmb_result.req_resp);
@@ -1121,6 +1155,19 @@ static void emmc_rpmb_blk_read(SDState *sd, uint64_t addr, uint32_t len)
             memset(sd->rpmb_result.data, 0, sizeof(sd->rpmb_result.data));
             sd->rpmb_result.result = cpu_to_be16(RPMB_RESULT_READ_FAILURE);
         }
+        if (sd->multi_blk_cnt > 1 &&
+            !rpmb_calc_hmac(&sd->rpmb_hmac, sd->pers_state.rpmb_key,
+                            sd->rpmb_result.data, 284, NULL, false)) {
+            memset(sd->rpmb_result.data, 0, sizeof(sd->rpmb_result.data));
+            sd->rpmb_result.result = cpu_to_be16(RPMB_RESULT_GENERAL_FAILURE);
+        }
+    }
+    if (sd->multi_blk_cnt == 1 &&
+        !rpmb_calc_hmac(&sd->rpmb_hmac, sd->pers_state.rpmb_key,
+                        sd->rpmb_result.data, 284, sd->rpmb_result.key_mac,
+                        true)) {
+        memset(sd->rpmb_result.data, 0, sizeof(sd->rpmb_result.data));
+        sd->rpmb_result.result = cpu_to_be16(RPMB_RESULT_GENERAL_FAILURE);
     }
     memcpy(sd->data, &sd->rpmb_result, sizeof(sd->rpmb_result));
 }
@@ -3094,6 +3141,7 @@ static const TypeInfo sd_types[] = {
         .parent         = TYPE_SD_CARD,
         .class_init     = sd_spi_class_init,
     },
+    /* must be last element */
     {
         .name           = TYPE_EMMC,
         .parent         = TYPE_SDMMC_COMMON,
@@ -3101,4 +3149,12 @@ static const TypeInfo sd_types[] = {
     },
 };
 
-DEFINE_TYPES(sd_types)
+static void sd_register_types(void)
+{
+    int num = ARRAY_SIZE(sd_types);
+    if (!qcrypto_hmac_supports(QCRYPTO_HASH_ALGO_SHA256)) {
+        num--;
+    }
+    type_register_static_array(sd_types, num);
+}
+type_init(sd_register_types);
